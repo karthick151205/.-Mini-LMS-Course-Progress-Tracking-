@@ -7,6 +7,8 @@ import LessonViewPage from "./pages/LessonViewPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import UserProfilePage from "./pages/UserProfilePage";
 import AdminPanel from "./pages/AdminPanel";
+import StudentRoster from "./pages/StudentRoster";
+import GradingDashboard from "./pages/GradingDashboard";
 import { useState } from "react";
 
 function App() {
@@ -45,7 +47,8 @@ function App() {
         element={<UserProfilePage user={user} setUser={setUser} />} 
       />
       <Route path="/admin" element={<AdminPanel user={user} setUser={setUser} />} />
-
+      <Route path="/admin/roster" element={<StudentRoster user={user} />} />
+      <Route path="/admin/grades" element={<GradingDashboard user={user} />} />
       <Route path="*" element={<NotFoundPage />} /> {/* ✅ FIX COMMENT */}
     </Routes>
   );

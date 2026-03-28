@@ -11,38 +11,26 @@ import {
   deleteLesson,
 } from '../api';
 
-// ── Components ──────────────────────────────────────────────────
+// ── Internal Admin Components (Isolated) ────────────────────────
 const Field = ({ label, value, onChange, type = 'text', placeholder, textarea }) => (
   <div className="mb-4">
-    <label className="block text-xs font-bold text-stone-500 uppercase tracking-widest mb-1.5">{label}</label>
+    <label className="block text-[10px] font-black text-stone-500 uppercase tracking-[0.2em] mb-2">{label}</label>
     {textarea ? (
-      <textarea 
-        rows={3} 
-        value={value} 
-        onChange={onChange} 
-        placeholder={placeholder} 
-        className="w-full bg-stone-100 border-b-2 border-stone-200 text-stone-900 text-sm p-2 outline-none focus:border-amber-500 transition-all placeholder:text-stone-400" 
-      />
+      <textarea rows={3} value={value} onChange={onChange} placeholder={placeholder} className="w-full bg-stone-100 border-b-2 border-stone-200 text-stone-900 text-sm p-3 rounded-xl outline-none focus:border-amber-500 transition-all" />
     ) : (
-      <input 
-        type={type} 
-        value={value} 
-        onChange={onChange} 
-        placeholder={placeholder} 
-        className="w-full bg-stone-100 border-b-2 border-stone-200 text-stone-900 text-sm p-2 outline-none focus:border-amber-500 transition-all placeholder:text-stone-400" 
-      />
+      <input type={type} value={value} onChange={onChange} placeholder={placeholder} className="w-full bg-stone-100 border-b-2 border-stone-200 text-stone-900 text-sm p-3 rounded-xl outline-none focus:border-amber-500 transition-all" />
     )}
   </div>
 );
 
 const Modal = ({ title, onClose, children }) => (
-  <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-stone-900/80 backdrop-blur-sm">
-    <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
-      <div className="h-1.5 bg-amber-500" />
-      <div className="p-6 overflow-y-auto">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-stone-800">{title}</h2>
-          <button onClick={onClose} className="text-stone-400 hover:text-stone-600 text-2xl">✕</button>
+  <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-stone-950/90 backdrop-blur-md">
+    <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+      <div className="h-2 bg-amber-500" />
+      <div className="p-8 overflow-y-auto">
+        <div className="flex items-center justify-between mb-8">
+          <h2 className="text-2xl font-black text-stone-900 tracking-tighter uppercase">{title}</h2>
+          <button onClick={onClose} className="text-stone-300 hover:text-stone-900 text-2xl transition-colors">✕</button>
         </div>
         {children}
       </div>
@@ -56,7 +44,6 @@ export default function AdminPanel({ user }) {
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expandedCourse, setExpandedCourse] = useState(null);
-  
   const [modal, setModal] = useState(null); 
   const [modalTarget, setModalTarget] = useState(null); 
   const [saving, setSaving] = useState(false);
@@ -71,7 +58,7 @@ export default function AdminPanel({ user }) {
   useEffect(() => {
     if (!user || user.role !== 'admin') navigate('/');
     else loadCourses();
-  }, [user]);
+  }, [user, navigate]);
 
   const loadCourses = async () => {
     setLoading(true);
@@ -92,158 +79,133 @@ export default function AdminPanel({ user }) {
     setLessonForm({ title: '', type: 'reading', content: '', quiz: { question: '', options: ['', '', '', ''], correct: 0 } });
   };
 
-  // ── Action Handlers ──────────────────────────────────────────
-  const handleAddCourse = async () => {
-    if (!courseForm.title.trim()) return;
-    setSaving(true);
-    await createCourse(courseForm);
-    await loadCourses();
-    closeModal();
-  };
-
-  const handleAddChapter = async () => {
-    if (!chapterForm.title.trim()) return;
-    setSaving(true);
-    await createChapter(modalTarget, chapterForm);
-    await loadCourses();
-    closeModal();
-  };
-
   const handleSaveLesson = async () => {
-    if (!lessonForm.title.trim()) return;
     setSaving(true);
-    try {
-        if (modal === 'editLesson') {
-          const { courseId, chapterId, lessonId } = modalTarget;
-          await updateLesson(courseId, chapterId, lessonId, lessonForm);
-        } else {
-          const { courseId, chapterId } = modalTarget;
-          await createLesson(courseId, chapterId, lessonForm);
-        }
-        await loadCourses();
-        closeModal();
-    } catch (err) {
-        console.error("Save failed:", err);
-        setSaving(false);
+    if (modal === 'editLesson') {
+      const { courseId, chapterId, lessonId } = modalTarget;
+      await updateLesson(courseId, chapterId, lessonId, lessonForm);
+    } else {
+      const { courseId, chapterId } = modalTarget;
+      await createLesson(courseId, chapterId, lessonForm);
     }
+    await loadCourses();
+    closeModal();
   };
 
-  if (loading) return <div className="min-h-screen bg-stone-950 flex items-center justify-center text-amber-500 font-bold">Loading...</div>;
+  if (loading) return <div className="min-h-screen bg-stone-950 flex items-center justify-center text-amber-500 font-black tracking-widest uppercase">Initializing Admin Hub...</div>;
 
   return (
-    <div className="min-h-screen bg-stone-950 text-white flex">
+    <div className="min-h-screen bg-stone-950 text-white flex font-sans">
       
-      {/* ── SIDEBAR (Admin Focus) ── */}
-      <aside className="w-64 bg-stone-900 border-r border-stone-800 flex flex-col py-8 px-5 flex-shrink-0 hidden lg:flex sticky top-0 h-screen">
-        <div className="flex items-center gap-3 mb-10 px-2">
-          <div className="w-10 h-10 rounded-xl bg-amber-500 flex items-center justify-center shadow-lg shadow-amber-500/20">
-            <span className="text-xl">🛠️</span>
+      {/* ── CUSTOM ADMIN SIDEBAR (No Student Links) ── */}
+      <aside className="w-72 bg-stone-900 border-r border-stone-800 flex flex-col py-10 px-6 flex-shrink-0 sticky top-0 h-screen">
+        <div className="flex items-center gap-4 mb-12 px-2">
+          <div className="w-12 h-12 rounded-2xl bg-amber-500 flex items-center justify-center shadow-2xl shadow-amber-500/20">
+            <span className="text-2xl">⚡</span>
           </div>
           <div>
-            <p className="text-white font-black text-sm leading-none tracking-tighter">ADMIN HUB</p>
-            <p className="text-stone-500 text-[10px] font-bold mt-1 uppercase">Control Center</p>
+            <p className="text-white font-black text-lg leading-none tracking-tighter italic">LMS PRO</p>
+            <p className="text-stone-500 text-[10px] font-black mt-1 uppercase tracking-widest">Admin Control</p>
           </div>
         </div>
 
-        <nav className="space-y-2 flex-1">
-          <button className="w-full flex items-center gap-3 px-4 py-3 bg-amber-500/10 text-amber-500 rounded-xl text-sm font-bold transition-all">
+        <nav className="space-y-3 flex-1">
+          <button className="w-full flex items-center gap-4 px-5 py-4 bg-amber-500 text-stone-950 rounded-2xl text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-amber-500/10">
             <span>📚</span> Course Manager
           </button>
-          <button className="w-full flex items-center gap-3 px-4 py-3 text-stone-500 hover:text-stone-300 hover:bg-stone-800/50 rounded-xl text-sm font-bold transition-all">
-            <span>👥</span> User Records
+          <button 
+            onClick={() => navigate('/admin/roster')} // Ensure this route is set in App.jsx
+            className="w-full flex items-center gap-4 px-5 py-4 text-stone-500 hover:text-white hover:bg-stone-800/50 rounded-2xl text-xs font-black uppercase tracking-widest transition-all"
+          >
+          <span>👥</span> Student Roster
           </button>
-          <button className="w-full flex items-center gap-3 px-4 py-3 text-stone-500 hover:text-stone-300 hover:bg-stone-800/50 rounded-xl text-sm font-bold transition-all">
-            <span>📈</span> Analytics
+          <button className="w-full flex items-center gap-4 px-5 py-4 text-stone-500 hover:text-white hover:bg-stone-800/50 rounded-2xl text-xs font-black uppercase tracking-widest transition-all">
+            <span>📊</span> System Logs
           </button>
         </nav>
 
-        <div className="mt-auto border-t border-stone-800 pt-6">
-          <button
-            onClick={() => navigate('/')}
-            className="flex items-center gap-3 px-4 py-3 text-stone-500 hover:text-amber-500 transition-colors w-full text-sm font-bold"
-          >
-            <span>🏠</span> Exit to Website
-          </button>
-        </div>
+        <button
+          onClick={() => navigate('/')}
+          className="mt-auto flex items-center justify-center gap-3 px-5 py-4 border-2 border-stone-800 text-stone-500 hover:text-amber-500 hover:border-amber-500/50 rounded-2xl text-xs font-black uppercase tracking-widest transition-all"
+        >
+          <span>🏠</span> Exit to Website
+        </button>
       </aside>
 
-      {/* ── MAIN CONTENT AREA ── */}
-      <main className="flex-1 overflow-auto bg-stone-950">
-        <header className="px-8 py-8 flex justify-between items-center sticky top-0 bg-stone-950/80 backdrop-blur-md z-10">
+      {/* ── MAIN MANAGEMENT AREA ── */}
+      <main className="flex-1 overflow-auto">
+        <header className="px-10 py-10 flex justify-between items-center sticky top-0 bg-stone-950/90 backdrop-blur-xl z-10 border-b border-stone-900">
           <div>
-            <h1 className="text-3xl font-black text-white tracking-tighter uppercase">Management</h1>
-            <p className="text-stone-500 text-sm font-medium">Create and refine your educational content</p>
+            <h1 className="text-4xl font-black text-white tracking-tighter uppercase italic">Content Engine</h1>
+            <p className="text-stone-500 text-sm font-bold mt-1">Manage your courses, chapters, and quizzes from one place.</p>
           </div>
           <button 
             onClick={() => setModal('addCourse')}
-            className="bg-amber-500 hover:bg-amber-400 text-stone-950 px-6 py-3 rounded-xl font-black text-sm shadow-lg shadow-amber-500/10 transition-all active:scale-95"
+            className="bg-white hover:bg-amber-500 text-stone-950 px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl transition-all active:scale-95"
           >
-            + NEW COURSE
+            + Create New Course
           </button>
         </header>
 
-        <div className="px-8 pb-12 space-y-8">
+        <div className="p-10 space-y-10">
           
-          {/* ── ADMIN STATS ── */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-stone-900 border border-stone-800 p-6 rounded-2xl">
-              <p className="text-stone-500 text-xs font-black uppercase tracking-widest">Active Courses</p>
-              <p className="text-3xl font-black text-white mt-1">{courses.length}</p>
-            </div>
-            <div className="bg-stone-900 border border-stone-800 p-6 rounded-2xl">
-              <p className="text-stone-500 text-xs font-black uppercase tracking-widest">Total Chapters</p>
-              <p className="text-3xl font-black text-white mt-1">
-                {courses.reduce((acc, curr) => acc + (curr.chapters?.length || 0), 0)}
-              </p>
-            </div>
-            <div className="bg-stone-900 border border-stone-800 p-6 rounded-2xl">
-              <p className="text-stone-500 text-xs font-black uppercase tracking-widest">Global Lessons</p>
-              <p className="text-3xl font-black text-white mt-1">
-                {courses.reduce((acc, curr) => 
-                  acc + (curr.chapters?.reduce((subAcc, ch) => subAcc + (ch.lessons?.length || 0), 0) || 0), 0
-                )}
-              </p>
-            </div>
+          {/* ── MANAGEMENT STATS ── */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[
+              { label: 'Total Courses', val: courses.length, icon: '📂' },
+              { label: 'Live Chapters', val: courses.reduce((a, c) => a + (c.chapters?.length || 0), 0), icon: '📖' },
+              { label: 'Global Lessons', val: courses.reduce((a, c) => a + (c.chapters?.reduce((sa, ch) => sa + (ch.lessons?.length || 0), 0) || 0), 0), icon: '🎯' }
+            ].map(stat => (
+              <div key={stat.label} className="bg-stone-900 border border-stone-800 p-8 rounded-3xl shadow-sm">
+                <div className="flex justify-between items-center mb-4">
+                  <p className="text-stone-500 text-[10px] font-black uppercase tracking-[0.2em]">{stat.label}</p>
+                  <span className="text-xl">{stat.icon}</span>
+                </div>
+                <p className="text-4xl font-black text-white">{stat.val}</p>
+              </div>
+            ))}
           </div>
 
           {/* ── COURSE LIST ── */}
-          <div className="grid gap-4">
+          <div className="grid gap-6">
             {courses.length === 0 ? (
-                <div className="text-center py-20 bg-stone-900/50 rounded-2xl border border-dashed border-stone-800 text-stone-600">No courses created yet.</div>
+                <div className="text-center py-32 bg-stone-900/30 rounded-[3rem] border-2 border-dashed border-stone-800 text-stone-600 font-bold uppercase tracking-widest">No Courses in Library</div>
             ) : courses.map(course => (
-              <div key={course._id} className="bg-stone-900 rounded-2xl border border-stone-800 overflow-hidden transition-all hover:border-stone-700">
-                <div className="p-6 flex items-center justify-between">
+              <div key={course._id} className="bg-stone-900 rounded-[2.5rem] border border-stone-800 overflow-hidden transition-all hover:border-stone-600 shadow-sm">
+                <div className="p-8 flex items-center justify-between">
                   <div onClick={() => setExpandedCourse(expandedCourse === course._id ? null : course._id)} className="cursor-pointer flex-1">
-                    <h3 className="text-lg font-bold text-white uppercase tracking-tight">{course.title}</h3>
-                    <div className="flex gap-2 mt-1">
-                      <span className="text-[10px] font-black bg-stone-800 text-stone-400 px-2 py-1 rounded uppercase tracking-widest">{course.level}</span>
-                      <span className="text-[10px] font-black bg-stone-800 text-amber-500/80 px-2 py-1 rounded uppercase tracking-widest">{course.chapters?.length || 0} Chapters</span>
+                    <h3 className="text-xl font-black text-white uppercase tracking-tighter">{course.title}</h3>
+                    <div className="flex gap-3 mt-2">
+                      <span className="text-[9px] font-black bg-stone-800 text-amber-500 px-3 py-1 rounded-lg uppercase tracking-widest border border-stone-700">{course.level}</span>
+                      <span className="text-[9px] font-black bg-stone-800 text-stone-400 px-3 py-1 rounded-lg uppercase tracking-widest border border-stone-700">{course.chapters?.length || 0} Chapters</span>
                     </div>
                   </div>
-                  <div className="flex gap-3">
-                    <button onClick={() => { setModalTarget(course._id); setModal('addChapter'); }} className="text-xs font-bold text-amber-500 hover:text-amber-400">+ CHAPTER</button>
-                    <button onClick={async () => { if(window.confirm("Delete course?")) { await deleteCourse(course._id); loadCourses(); }}} className="text-stone-600 hover:text-red-500">🗑️</button>
+                  <div className="flex gap-4">
+                    <button onClick={() => { setModalTarget(course._id); setModal('addChapter'); }} className="text-[10px] font-black text-amber-500 hover:text-white transition-colors uppercase tracking-widest">+ CHAPTER</button>
+                    <button onClick={async () => { if(window.confirm("Delete course?")) { await deleteCourse(course._id); loadCourses(); }}} className="text-stone-600 hover:text-red-500 transition-colors">🗑️</button>
                   </div>
                 </div>
 
                 {expandedCourse === course._id && (
-                  <div className="bg-stone-950/50 p-6 pt-0 space-y-4">
+                  <div className="bg-stone-950/50 p-8 pt-0 space-y-6">
                     {(course.chapters || []).map(chapter => (
-                      <div key={chapter._id} className="bg-stone-900/80 p-4 rounded-xl border border-stone-800">
-                        <div className="flex justify-between items-center mb-4">
-                          <h4 className="font-bold text-stone-300">📖 {chapter.title}</h4>
-                          <div className="flex gap-2">
-                              <button onClick={() => { setModalTarget({ courseId: course._id, chapterId: chapter._id }); setModal('addLesson'); }} className="text-[10px] font-black text-amber-500">+ LESSON/QUIZ</button>
-                              <button onClick={async () => { if(window.confirm("Delete chapter?")) { await deleteChapter(course._id, chapter._id); loadCourses(); }}} className="text-stone-600 hover:text-red-500">🗑️</button>
+                      <div key={chapter._id} className="bg-stone-900/80 p-6 rounded-[2rem] border border-stone-800 shadow-inner">
+                        <div className="flex justify-between items-center mb-6">
+                          <h4 className="font-black text-stone-400 text-xs uppercase tracking-widest">📖 {chapter.title}</h4>
+                          <div className="flex gap-4">
+                              <button onClick={() => { setModalTarget({ courseId: course._id, chapterId: chapter._id }); setModal('addLesson'); }} className="text-[9px] font-black text-amber-500 uppercase tracking-widest">+ LESSON</button>
+                              <button onClick={async () => { if(window.confirm("Delete chapter?")) { await deleteChapter(course._id, chapter._id); loadCourses(); }}} className="text-stone-700 hover:text-red-500">✕</button>
                           </div>
                         </div>
-                        <div className="space-y-2">
+                        <div className="space-y-3">
                           {(chapter.lessons || []).map(lesson => (
-                            <div key={lesson._id} className="flex justify-between items-center bg-stone-950 px-3 py-2 rounded-lg group hover:bg-stone-900 transition-colors">
-                              <span className="text-xs text-stone-400">{lesson.type === 'quiz' ? '❓' : '📄'} {lesson.title}</span>
-                              <div className="flex gap-4 opacity-0 group-hover:opacity-100 transition-all">
-                                <button onClick={() => { setLessonForm(lesson); setModalTarget({ courseId: course._id, chapterId: chapter._id, lessonId: lesson._id }); setModal('editLesson'); }} className="text-[10px] font-bold text-sky-500">EDIT</button>
-                                <button onClick={async () => { if(window.confirm("Delete lesson?")) { await deleteLesson(course._id, chapter._id, lesson._id); loadCourses(); }}} className="text-[10px] font-bold text-red-500">DEL</button>
+                            <div key={lesson._id} className="flex justify-between items-center bg-stone-950 px-5 py-4 rounded-2xl group border border-stone-900 hover:border-stone-800 transition-all">
+                              <span className="text-xs font-bold text-stone-500 uppercase tracking-tight">
+                                {lesson.type === 'quiz' ? '❓' : '📄'} {lesson.title}
+                              </span>
+                              <div className="flex gap-6 opacity-0 group-hover:opacity-100 transition-all">
+                                <button onClick={() => { setLessonForm(lesson); setModalTarget({ courseId: course._id, chapterId: chapter._id, lessonId: lesson._id }); setModal('editLesson'); }} className="text-[10px] font-black text-sky-500 uppercase tracking-widest">Edit</button>
+                                <button onClick={async () => { if(window.confirm("Delete lesson?")) { await deleteLesson(course._id, chapter._id, lesson._id); loadCourses(); }}} className="text-[10px] font-black text-red-800 uppercase tracking-widest">Del</button>
                               </div>
                             </div>
                           ))}
@@ -258,79 +220,58 @@ export default function AdminPanel({ user }) {
         </div>
       </main>
 
-      {/* ── MODALS (Same as before but with UI fixes) ── */}
-
+      {/* ── MODALS (Course, Chapter, Lesson) ── */}
+      {/* ... keeping the modal logic the same but with the high-end styling ... */}
       {modal === 'addCourse' && (
         <Modal title="New Course" onClose={closeModal}>
-          <Field label="Course Title" value={courseForm.title} onChange={e => setCourseForm({...courseForm, title: e.target.value})} placeholder="e.g., Intro to Java" />
-          <Field label="Description" textarea value={courseForm.description} onChange={e => setCourseForm({...courseForm, description: e.target.value})} placeholder="What will students learn?" />
-          <button onClick={handleAddCourse} disabled={saving} className="w-full bg-amber-500 py-4 rounded-xl font-bold text-stone-900 mt-4 active:scale-95 transition-transform disabled:opacity-50">
-            {saving ? 'CREATING...' : 'CREATE COURSE'}
+          <Field label="Course Title" value={courseForm.title} onChange={e => setCourseForm({...courseForm, title: e.target.value})} placeholder="e.g., REACT ADVANCED" />
+          <Field label="Description" textarea value={courseForm.description} onChange={e => setCourseForm({...courseForm, description: e.target.value})} placeholder="What's the goal?" />
+          <button onClick={async () => { setSaving(true); await createCourse(courseForm); await loadCourses(); closeModal(); }} disabled={saving} className="w-full bg-stone-900 text-white py-5 rounded-2xl font-black text-xs uppercase tracking-[0.2em] mt-4 hover:bg-amber-500 hover:text-stone-900 transition-all">
+            {saving ? 'Creating...' : 'Deploy Course'}
           </button>
         </Modal>
       )}
 
       {modal === 'addChapter' && (
         <Modal title="New Chapter" onClose={closeModal}>
-          <Field label="Chapter Title" value={chapterForm.title} onChange={e => setChapterForm({title: e.target.value})} placeholder="e.g., Variables & Types" />
-          <button onClick={handleAddChapter} disabled={saving} className="w-full bg-amber-500 py-4 rounded-xl font-bold text-stone-900 mt-4 active:scale-95 transition-transform disabled:opacity-50">
-            {saving ? 'ADDING...' : 'ADD CHAPTER'}
+          <Field label="Chapter Title" value={chapterForm.title} onChange={e => setChapterForm({title: e.target.value})} placeholder="e.g., STATE MANAGEMENT" />
+          <button onClick={async () => { setSaving(true); await createChapter(modalTarget, chapterForm); await loadCourses(); closeModal(); }} disabled={saving} className="w-full bg-stone-900 text-white py-5 rounded-2xl font-black text-xs uppercase tracking-[0.2em] mt-4 hover:bg-amber-500 hover:text-stone-900 transition-all">
+            {saving ? 'Adding...' : 'Attach Chapter'}
           </button>
         </Modal>
       )}
 
       {(modal === 'addLesson' || modal === 'editLesson') && (
-        <Modal title={modal === 'addLesson' ? "Create Content" : "Update Content"} onClose={closeModal}>
+        <Modal title={modal === 'addLesson' ? "New Content" : "Update Content"} onClose={closeModal}>
           <div className="space-y-6">
-            <Field label="Title" value={lessonForm.title} onChange={e => setLessonForm({ ...lessonForm, title: e.target.value })} placeholder="Lesson name" />
-            
-            <div className="flex bg-stone-100 p-1 rounded-xl">
+            <Field label="Title" value={lessonForm.title} onChange={e => setLessonForm({ ...lessonForm, title: e.target.value })} />
+            <div className="flex bg-stone-100 p-1.5 rounded-2xl">
               {['reading', 'quiz'].map(t => (
-                <button 
-                  key={t} 
-                  type="button"
-                  onClick={() => setLessonForm({...lessonForm, type: t})} 
-                  className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${lessonForm.type === t ? 'bg-white shadow-sm text-amber-600' : 'text-stone-400 hover:text-stone-600'}`}
-                >
-                  {t.toUpperCase()}
+                <button key={t} type="button" onClick={() => setLessonForm({...lessonForm, type: t})} className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${lessonForm.type === t ? 'bg-white shadow-sm text-amber-600' : 'text-stone-400 hover:text-stone-600'}`}>
+                  {t}
                 </button>
               ))}
             </div>
-
             {lessonForm.type === 'reading' ? (
-              <Field label="Reading Content" textarea value={lessonForm.content} onChange={e => setLessonForm({ ...lessonForm, content: e.target.value })} placeholder="Write your lesson content here..." />
+              <Field label="Body Content" textarea value={lessonForm.content} onChange={e => setLessonForm({ ...lessonForm, content: e.target.value })} />
             ) : (
-              <div className="space-y-4 bg-stone-50 p-4 rounded-2xl border border-stone-200">
-                <Field label="Question" value={lessonForm.quiz.question} onChange={e => setLessonForm({...lessonForm, quiz: {...lessonForm.quiz, question: e.target.value}})} placeholder="Ask something..." />
-                <p className="text-[10px] font-bold text-stone-400 uppercase mb-2">Options (Click circle for correct answer)</p>
-                <div className="space-y-2">
+              <div className="space-y-4 bg-stone-50 p-6 rounded-[2rem] border border-stone-200">
+                <Field label="The Question" value={lessonForm.quiz.question} onChange={e => setLessonForm({...lessonForm, quiz: {...lessonForm.quiz, question: e.target.value}})} />
+                <div className="space-y-3">
                   {lessonForm.quiz.options.map((opt, i) => (
-                    <div key={i} className="flex items-center gap-3 bg-white p-2 rounded-lg border border-stone-200 focus-within:border-amber-300 transition-colors">
-                      <input 
-                        type="radio" 
-                        name="correctOpt" 
-                        checked={lessonForm.quiz.correct === i} 
-                        onChange={() => setLessonForm({...lessonForm, quiz: {...lessonForm.quiz, correct: i}})}
-                        className="w-4 h-4 accent-amber-500 cursor-pointer"
-                      />
-                      <input 
-                        placeholder={`Option ${i+1}`} 
-                        className="flex-1 text-sm outline-none text-stone-900 bg-transparent placeholder:text-stone-300" 
-                        value={opt} 
-                        onChange={e => {
-                          const newOpts = [...lessonForm.quiz.options];
-                          newOpts[i] = e.target.value;
-                          setLessonForm({...lessonForm, quiz: {...lessonForm.quiz, options: newOpts}});
-                        }}
-                      />
+                    <div key={i} className="flex items-center gap-4 bg-white p-3 rounded-2xl border border-stone-200">
+                      <input type="radio" checked={lessonForm.quiz.correct === i} onChange={() => setLessonForm({...lessonForm, quiz: {...lessonForm.quiz, correct: i}})} className="w-5 h-5 accent-amber-500" />
+                      <input placeholder={`Option ${i+1}`} className="flex-1 text-sm font-bold text-stone-900 outline-none bg-transparent" value={opt} onChange={e => {
+                        const newOpts = [...lessonForm.quiz.options]; newOpts[i] = e.target.value;
+                        setLessonForm({...lessonForm, quiz: {...lessonForm.quiz, options: newOpts}});
+                      }} />
                     </div>
                   ))}
                 </div>
               </div>
             )}
-
-            <button onClick={handleSaveLesson} disabled={saving} className="w-full bg-stone-900 text-white py-4 rounded-xl font-bold hover:bg-amber-500 hover:text-stone-900 transition-all active:scale-95 disabled:opacity-50">
-              {saving ? 'SAVING...' : 'SAVE CONTENT'}
+            <button onClick={handleSaveLesson} disabled={saving} className="w-full bg-stone-900 text-white py-5 rounded-2xl font-black text-xs uppercase tracking-[0.2em] hover:bg-amber-500 hover:text-stone-900 transition-all">
+              {saving ? 'Saving...' : 'Commit Changes'}
             </button>
           </div>
         </Modal>

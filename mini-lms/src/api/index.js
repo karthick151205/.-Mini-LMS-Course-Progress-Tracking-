@@ -1,5 +1,5 @@
-const BASE_URL = "https://mini-lms-course-progress-tracking-api.onrender.com";
-//const BASE_URL = "http://localhost:5000";
+//const BASE_URL = "https://mini-lms-course-progress-tracking-api.onrender.com";
+const BASE_URL = "http://localhost:5000";
 
 // ── Helpers ──────────────────────────────────────────────────────
 const getStoredUser = () => JSON.parse(localStorage.getItem("user"));
@@ -42,10 +42,13 @@ export const fetchCourseById = async (courseId) => {
   return res.json();
 };
 
-// ══ PROGRESS TRACKING ════════════════════════════════════════════
+// ══ PROGRESS & GRADING TRACKING ═══════════════════════════════════
+
+// ✅ Fetch progress for a specific user
 export const fetchProgress = async (userId) => {
   try {
-    const res = await fetch(`${BASE_URL}/api/progress/${userId}`);
+    // Note: Updated path to /api/users/progress to match your new routes
+    const res = await fetch(`${BASE_URL}/api/users/progress/${userId}`);
     const data = await res.json();
     return Array.isArray(data) ? data : [];
   } catch {
@@ -53,16 +56,44 @@ export const fetchProgress = async (userId) => {
   }
 };
 
-export const markLessonComplete = async (userId, courseId, lessonId) => {
+// ✅ Updated: Mark lesson complete + Send Grade Data 🚀
+export const markLessonComplete = async (userId, courseId, lessonId, gradeData = null) => {
   try {
-    await fetch(`${BASE_URL}/api/progress`, {
+    const res = await fetch(`${BASE_URL}/api/users/progress`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId, courseId, lessonId }),
+      body: JSON.stringify({ 
+        userId, 
+        courseId, 
+        lessonId, 
+        gradeData // 🎯 This passes the score to the backend for the dashboard
+      }),
     });
+    return res.json();
   } catch (err) {
-    console.error("❌ Error updating progress:", err);
+    console.error("❌ Error updating progress/grades:", err);
   }
+};
+
+// ══ ADMIN: USER & ROSTER MANAGEMENT ═══════════════════════════════
+
+export const fetchAllUsers = async () => {
+  const res = await fetch(`${BASE_URL}/api/users`, {
+    headers: getAdminHeaders(), 
+  });
+  return res.json();
+};
+
+export const deleteUser = async (id) => {
+  const user = getStoredUser();
+  const res = await fetch(`${BASE_URL}/api/users/${id}`, {
+    method: 'DELETE',
+    headers: { 
+        'Content-Type': 'application/json',
+        'x-user-role': user?.role 
+    }
+  });
+  return res.json();
 };
 
 // ══ ADMIN: COURSE MANAGEMENT ═════════════════════════════════════
@@ -85,7 +116,6 @@ export const deleteCourse = async (courseId) => {
 
 // ══ ADMIN: CHAPTER & LESSON MANAGEMENT ═══════════════════════════
 
-// ✅ Add a Chapter
 export const createChapter = async (courseId, chapterData) => {
   const res = await fetch(`${BASE_URL}/api/courses/${courseId}/chapters`, {
     method: "POST",
@@ -95,7 +125,6 @@ export const createChapter = async (courseId, chapterData) => {
   return res.json();
 };
 
-// ✅ Delete a Chapter
 export const deleteChapter = async (courseId, chapterId) => {
   const res = await fetch(`${BASE_URL}/api/courses/${courseId}/chapters/${chapterId}`, {
     method: "DELETE",
@@ -104,7 +133,6 @@ export const deleteChapter = async (courseId, chapterId) => {
   return res.json();
 };
 
-// ✅ Add a Lesson to a specific Chapter (Used for both Readings and Quizzes)
 export const createLesson = async (courseId, chapterId, lessonData) => {
   const res = await fetch(`${BASE_URL}/api/courses/${courseId}/chapters/${chapterId}/lessons`, {
     method: "POST",
@@ -114,7 +142,6 @@ export const createLesson = async (courseId, chapterId, lessonData) => {
   return res.json();
 };
 
-// ✅ Update/Edit a Lesson or Quiz 🚀
 export const updateLesson = async (courseId, chapterId, lessonId, lessonData) => {
   const res = await fetch(`${BASE_URL}/api/courses/${courseId}/chapters/${chapterId}/lessons/${lessonId}`, {
     method: "PUT",
@@ -124,7 +151,6 @@ export const updateLesson = async (courseId, chapterId, lessonId, lessonData) =>
   return res.json();
 };
 
-// ✅ Delete a Lesson
 export const deleteLesson = async (courseId, chapterId, lessonId) => {
   const res = await fetch(`${BASE_URL}/api/courses/${courseId}/chapters/${chapterId}/lessons/${lessonId}`, {
     method: "DELETE",

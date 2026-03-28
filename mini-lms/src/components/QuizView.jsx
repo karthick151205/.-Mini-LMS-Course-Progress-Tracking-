@@ -3,14 +3,31 @@ import { useState } from 'react';
 function QuizView({ quiz, lessonId, courseId, isCompleted, markComplete, isAdmin }) {
   const [selected, setSelected] = useState(null);
   const [submitted, setSubmitted] = useState(false);
-  const [showAnswer, setShowAnswer] = useState(false); // 💡 New: Admin preview toggle
+  const [showAnswer, setShowAnswer] = useState(false);
 
   const isCorrect = selected === quiz.correct;
 
   const handleSubmit = () => {
-    if (selected === null || isAdmin) return; // 🛡️ Prevent admin from submitting
+    if (selected === null || isAdmin) return;
+    
     setSubmitted(true);
-    if (isCorrect) markComplete(lessonId, courseId);
+
+    // ── 📊 GRADE CALCULATION ──────────────────────────────────
+    // We create a grade object to send to the backend.
+    // Even if it's 1 question, we store it as a percentage for the dashboard.
+    const gradeData = {
+      lessonId,
+      courseId,
+      score: isCorrect ? 1 : 0,
+      totalQuestions: 1,
+      percentage: isCorrect ? 100 : 0,
+      completedAt: new Date()
+    };
+
+    // We pass the gradeData as the 3rd argument to markComplete
+    if (isCorrect) {
+      markComplete(lessonId, courseId, gradeData);
+    }
   };
 
   const handleRetry = () => {
@@ -19,7 +36,6 @@ function QuizView({ quiz, lessonId, courseId, isCompleted, markComplete, isAdmin
   };
 
   const getOptionStyle = (index) => {
-    // 💡 Admin Preview Logic
     if (isAdmin && showAnswer) {
       return index === quiz.correct 
         ? 'border-emerald-400 bg-emerald-50 text-emerald-700 ring-2 ring-emerald-100'
@@ -72,7 +88,6 @@ function QuizView({ quiz, lessonId, courseId, isCompleted, markComplete, isAdmin
             className={`flex items-center gap-3 px-5 py-4 rounded-2xl border transition-all duration-200 ${getOptionStyle(index)} 
               ${!submitted && !isAdmin ? 'cursor-pointer active:scale-[0.98]' : 'cursor-default'}`}
           >
-            {/* Custom Checkbox UI */}
             <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all
               ${(selected === index || (isAdmin && showAnswer && index === quiz.correct)) 
                 ? 'bg-amber-500 border-amber-500' 
@@ -85,7 +100,6 @@ function QuizView({ quiz, lessonId, courseId, isCompleted, markComplete, isAdmin
             
             <span className="text-sm font-semibold">{option}</span>
 
-            {/* Icons */}
             {(submitted || (isAdmin && showAnswer)) && index === quiz.correct && (
               <span className="ml-auto bg-emerald-500 text-white w-5 h-5 flex items-center justify-center rounded-full text-[10px] font-bold">✓</span>
             )}
@@ -96,25 +110,34 @@ function QuizView({ quiz, lessonId, courseId, isCompleted, markComplete, isAdmin
       {/* --- Action Area --- */}
       <div className="pt-4">
         {isAdmin ? (
-          <p className="text-stone-400 text-xs italic font-medium">Note: Admins cannot submit quiz answers.</p>
+          <p className="text-stone-400 text-xs italic font-medium uppercase tracking-tight">Admin Preview Mode: Results are not saved.</p>
         ) : (
           <>
             {!submitted ? (
               <button
                 onClick={handleSubmit}
                 disabled={selected === null}
-                className="w-full sm:w-auto bg-stone-900 hover:bg-amber-500 hover:text-stone-900 disabled:opacity-20 text-white text-xs font-black uppercase tracking-widest px-8 py-4 rounded-2xl transition-all shadow-lg active:scale-95"
+                className="w-full sm:w-auto bg-stone-900 hover:bg-amber-500 hover:text-stone-900 disabled:opacity-20 text-white text-[10px] font-black uppercase tracking-widest px-8 py-4 rounded-2xl transition-all shadow-lg active:scale-95"
               >
                 Submit Answer
               </button>
             ) : (
               <div className="space-y-4">
                 <div className={`p-4 rounded-2xl border flex items-center gap-3 ${isCorrect ? 'bg-emerald-50 border-emerald-100 text-emerald-700' : 'bg-red-50 border-red-100 text-red-700'}`}>
-                  <span className="text-xl">{isCorrect ? '🎉' : '❌'}</span>
-                  <p className="text-sm font-bold">{isCorrect ? 'Great job! Lesson completed.' : 'That wasn\'t quite right.'}</p>
+                  <span className="text-xl">{isCorrect ? '🎯' : '⚠️'}</span>
+                  <div>
+                    <p className="text-sm font-black uppercase tracking-tight">
+                      {isCorrect ? 'Perfect Score!' : 'Not quite right'}
+                    </p>
+                    <p className="text-xs opacity-80 font-medium">
+                      {isCorrect ? 'Your 100% grade has been recorded.' : 'Review the content and try again to pass.'}
+                    </p>
+                  </div>
                 </div>
                 {!isCorrect && (
-                  <button onClick={handleRetry} className="text-stone-400 hover:text-stone-900 text-xs font-bold underline">Try Again</button>
+                  <button onClick={handleRetry} className="text-stone-400 hover:text-stone-900 text-[10px] font-black uppercase tracking-widest underline underline-offset-4">
+                    Restart Quiz
+                  </button>
                 )}
               </div>
             )}
@@ -124,8 +147,8 @@ function QuizView({ quiz, lessonId, courseId, isCompleted, markComplete, isAdmin
 
       {/* Already Passed (Student Only) */}
       {isCompleted && !submitted && !isAdmin && (
-        <div className="bg-stone-50 border border-stone-200 p-4 rounded-2xl text-center">
-          <p className="text-stone-400 text-xs font-bold uppercase tracking-widest">✓ You've already passed this quiz</p>
+        <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-2xl flex items-center justify-center gap-2">
+          <span className="text-emerald-600 text-xs font-black uppercase tracking-widest">✓ Quiz Passed & Recorded</span>
         </div>
       )}
     </div>

@@ -6,24 +6,27 @@ function useProgress(userId) {
 
   // ✅ Load progress safely
   useEffect(() => {
-  if (!userId) return;
+    if (!userId) return;
+    fetchProgress(userId).then(data => {
+      setCompletedLessons(Array.isArray(data) ? data : []);
+    });
+  }, [userId]);
 
-  fetchProgress(userId).then(data => {
-    setCompletedLessons(Array.isArray(data) ? data : []);
-  });
-}, [userId]);
-
-  // ✅ Mark lesson complete
-  const markComplete = async (lessonId, courseId) => {
+  // ✅ Updated: Mark lesson complete (Now accepts optional gradeData)
+  const markComplete = async (lessonId, courseId, gradeData = null) => {
     if (completedLessons.includes(lessonId)) return;
 
+    // Optimistic Update: Update UI immediately
     const updated = [...completedLessons, lessonId];
     setCompletedLessons(updated);
 
     try {
-      await markLessonComplete(userId, courseId, lessonId);
+      // 🎯 Now passing gradeData to the API call
+      await markLessonComplete(userId, courseId, lessonId, gradeData);
     } catch (err) {
       console.error("❌ markComplete error:", err);
+      // Rollback UI if the server fails
+      setCompletedLessons(prev => prev.filter(id => id !== lessonId));
     }
   };
 
@@ -33,8 +36,10 @@ function useProgress(userId) {
       if (completedLessons.includes(lessonId)) {
         const updated = completedLessons.filter(id => id !== lessonId);
         setCompletedLessons(updated);
+        // If un-toggling, we don't usually send grades, just sync the completion
         await markLessonComplete(userId, courseId, lessonId);
       } else {
+        // Default to no gradeData for simple reading lessons
         await markComplete(lessonId, courseId);
       }
     } catch (err) {
