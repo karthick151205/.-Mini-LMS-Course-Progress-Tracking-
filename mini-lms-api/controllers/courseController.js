@@ -21,7 +21,7 @@ const getCourseById = async (req, res) => {
   }
 };
 
-// 3. CREATE COURSE (Basic details)
+// 3. CREATE COURSE
 const createCourse = async (req, res) => {
   try {
     const course = new Course(req.body);
@@ -32,12 +32,12 @@ const createCourse = async (req, res) => {
   }
 };
 
-// 4. ADD CHAPTER TO COURSE (New logic)
+// 4. ADD CHAPTER
 const addChapter = async (req, res) => {
   try {
     const course = await Course.findByIdAndUpdate(
       req.params.id,
-      { $push: { chapters: req.body } }, // req.body should be { title: "Chapter Name", order: 1 }
+      { $push: { chapters: req.body } },
       { new: true }
     );
     res.json(course);
@@ -46,13 +46,13 @@ const addChapter = async (req, res) => {
   }
 };
 
-// 5. ADD LESSON TO CHAPTER (New logic)
+// 5. ADD LESSON (OR QUIZ)
 const addLesson = async (req, res) => {
   try {
     const { courseId, chapterId } = req.params;
     const course = await Course.findOneAndUpdate(
       { _id: courseId, "chapters._id": chapterId },
-      { $push: { "chapters.$.lessons": req.body } }, // req.body is lesson data
+      { $push: { "chapters.$.lessons": req.body } },
       { new: true }
     );
     res.json(course);
@@ -61,7 +61,55 @@ const addLesson = async (req, res) => {
   }
 };
 
-// 6. DELETE COURSE
+// 6. UPDATE LESSON (OR QUIZ) - NEW! 🚀
+const updateLesson = async (req, res) => {
+  try {
+    const { courseId, chapterId, lessonId } = req.params;
+    const course = await Course.findOneAndUpdate(
+      { _id: courseId, "chapters._id": chapterId, "chapters.lessons._id": lessonId },
+      { $set: { "chapters.$[chap].lessons.$[less]": req.body } },
+      { 
+        arrayFilters: [{ "chap._id": chapterId }, { "less._id": lessonId }],
+        new: true 
+      }
+    );
+    res.json(course);
+  } catch (err) {
+    res.status(400).json({ message: "Update failed", error: err.message });
+  }
+};
+
+// 7. DELETE LESSON - NEW! 🚀
+const deleteLesson = async (req, res) => {
+  try {
+    const { courseId, chapterId, lessonId } = req.params;
+    const course = await Course.findByIdAndUpdate(
+      courseId,
+      { $pull: { "chapters.$[chap].lessons": { _id: lessonId } } },
+      { arrayFilters: [{ "chap._id": chapterId }], new: true }
+    );
+    res.json(course);
+  } catch (err) {
+    res.status(400).json({ message: "Delete failed", error: err.message });
+  }
+};
+
+// 8. DELETE CHAPTER - NEW! 🚀
+const deleteChapter = async (req, res) => {
+  try {
+    const { id, chapterId } = req.params;
+    const course = await Course.findByIdAndUpdate(
+      id,
+      { $pull: { chapters: { _id: chapterId } } },
+      { new: true }
+    );
+    res.json(course);
+  } catch (err) {
+    res.status(400).json({ message: "Delete failed", error: err.message });
+  }
+};
+
+// 9. DELETE COURSE
 const deleteCourse = async (req, res) => {
   try {
     const course = await Course.findByIdAndDelete(req.params.id);
@@ -72,12 +120,15 @@ const deleteCourse = async (req, res) => {
   }
 };
 
-// Export all 6 functions
+// Export all functions
 module.exports = { 
   getAllCourses, 
   getCourseById, 
   createCourse, 
   addChapter, 
   addLesson, 
+  updateLesson, 
+  deleteLesson, 
+  deleteChapter, 
   deleteCourse 
 };

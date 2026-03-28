@@ -1,4 +1,5 @@
 const BASE_URL = "https://mini-lms-course-progress-tracking-api.onrender.com";
+//const BASE_URL = "http://localhost:5000";
 
 // ── Helpers ──────────────────────────────────────────────────────
 const getStoredUser = () => JSON.parse(localStorage.getItem("user"));
@@ -94,10 +95,29 @@ export const createChapter = async (courseId, chapterData) => {
   return res.json();
 };
 
-// ✅ Add a Lesson to a specific Chapter
+// ✅ Delete a Chapter
+export const deleteChapter = async (courseId, chapterId) => {
+  const res = await fetch(`${BASE_URL}/api/courses/${courseId}/chapters/${chapterId}`, {
+    method: "DELETE",
+    headers: getAdminHeaders(),
+  });
+  return res.json();
+};
+
+// ✅ Add a Lesson to a specific Chapter (Used for both Readings and Quizzes)
 export const createLesson = async (courseId, chapterId, lessonData) => {
   const res = await fetch(`${BASE_URL}/api/courses/${courseId}/chapters/${chapterId}/lessons`, {
     method: "POST",
+    headers: getAdminHeaders(),
+    body: JSON.stringify(lessonData),
+  });
+  return res.json();
+};
+
+// ✅ Update/Edit a Lesson or Quiz 🚀
+export const updateLesson = async (courseId, chapterId, lessonId, lessonData) => {
+  const res = await fetch(`${BASE_URL}/api/courses/${courseId}/chapters/${chapterId}/lessons/${lessonId}`, {
+    method: "PUT",
     headers: getAdminHeaders(),
     body: JSON.stringify(lessonData),
   });

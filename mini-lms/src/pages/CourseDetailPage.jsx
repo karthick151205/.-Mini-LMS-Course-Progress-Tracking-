@@ -8,7 +8,11 @@ function CourseDetailPage({ user }) {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  const progress = useProgress(user._id);
+  // 🛡️ Admin Check
+  const isAdmin = user?.role === 'admin';
+
+  // Progress logic (Only strictly needed for students)
+  const progress = useProgress(user?._id);
   const completedLessons = progress?.completedLessons || [];
   const toggleLesson = progress?.toggleLesson;
   const getProgress = progress?.getProgress || (() => 0);
@@ -110,32 +114,46 @@ function CourseDetailPage({ user }) {
             ))}
           </div>
 
-          {/* Progress Bar */}
-          <div className="mt-6 max-w-xl">
-            <div className="flex justify-between items-center text-xs text-stone-400 mb-2">
-              <span>
-                <span className="font-semibold text-stone-600">{completedCount}</span>
-                {' '}of{' '}
-                <span className="font-semibold text-stone-600">{allLessons.length}</span>
-                {' '}lessons complete
-              </span>
-              <span className="font-bold text-amber-600 text-sm">{progressPct}%</span>
+          {/* ── Progress Bar (ONLY FOR STUDENTS) ── */}
+          {!isAdmin && (
+            <div className="mt-6 max-w-xl">
+              <div className="flex justify-between items-center text-xs text-stone-400 mb-2">
+                <span>
+                  <span className="font-semibold text-stone-600">{completedCount}</span>
+                  {' '}of{' '}
+                  <span className="font-semibold text-stone-600">{allLessons.length}</span>
+                  {' '}lessons complete
+                </span>
+                <span className="font-bold text-amber-600 text-sm">{progressPct}%</span>
+              </div>
+              <div className="bg-stone-100 rounded-full h-2.5 w-full overflow-hidden">
+                <div
+                  className="bg-gradient-to-r from-amber-400 to-amber-500 h-2.5 rounded-full transition-all duration-700 ease-out"
+                  style={{ width: `${progressPct}%` }}
+                />
+              </div>
             </div>
-            <div className="bg-stone-100 rounded-full h-2.5 w-full overflow-hidden">
-              <div
-                className="bg-gradient-to-r from-amber-400 to-amber-500 h-2.5 rounded-full transition-all duration-700 ease-out"
-                style={{ width: `${progressPct}%` }}
-              />
+          )}
+
+          {/* 🛠️ Admin Quick Action */}
+          {isAdmin && (
+            <div className="mt-6">
+              <button 
+                onClick={() => navigate('/admin')}
+                className="bg-stone-900 text-white text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-lg hover:bg-amber-500 hover:text-stone-900 transition-all duration-200 shadow-md"
+              >
+                ⚙️ Manage this course
+              </button>
             </div>
-          </div>
+          )}
         </div>
       </header>
 
       {/* ── Content ─────────────────────────────────────────────── */}
       <main className="max-w-4xl mx-auto px-6 py-8 space-y-4">
 
-        {/* Completion Banner */}
-        {progressPct === 100 && (
+        {/* Completion Banner (ONLY FOR STUDENTS) */}
+        {!isAdmin && progressPct === 100 && (
           <div className="flex items-center gap-3 bg-emerald-50 border border-emerald-200 rounded-2xl px-5 py-4 text-emerald-700 text-sm font-medium shadow-sm">
             <span className="text-xl">🎉</span>
             <div>
@@ -149,12 +167,11 @@ function CourseDetailPage({ user }) {
 
         {/* Chapters */}
         <div className="space-y-3">
-          {course.chapters.map((chapter, index) => (
+          {course.chapters.map((chapter) => (
             <div
               key={chapter._id}
               className="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden hover:border-amber-200 hover:shadow-md transition-all duration-200"
             >
-              {/* Chapter number badge on the side */}
               <div className="flex">
                 <div className="w-1 bg-gradient-to-b from-amber-400 to-amber-300 flex-shrink-0 rounded-l-2xl" />
                 <div className="flex-1">
@@ -163,6 +180,7 @@ function CourseDetailPage({ user }) {
                     completedLessons={completedLessons}
                     toggleLesson={toggleLesson}
                     courseId={course._id}
+                    isAdmin={isAdmin} // 💡 Pass isAdmin here
                   />
                 </div>
               </div>

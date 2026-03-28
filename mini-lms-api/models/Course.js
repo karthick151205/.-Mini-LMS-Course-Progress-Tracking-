@@ -1,26 +1,37 @@
 const mongoose = require('mongoose');
 
-// 1. Define what a SINGLE LESSON looks like
+// 1. Updated Lesson Schema to support Quizzes
 const lessonSchema = new mongoose.Schema({
   title: { type: String, required: true },
-  content: { type: String, required: true },
-  type: { type: String, enum: ['reading', 'quiz'], default: 'reading' },
+  // 💡 Changed: required: false because quizzes might not have 'content' text
+  content: { type: String, required: false }, 
+  type: { 
+    type: String, 
+    enum: ['reading', 'quiz'], 
+    default: 'reading' 
+  },
+  // 💡 Added: Quiz structure
+  quiz: {
+    question: { type: String },
+    options: [String], // Array of choices (e.g. ["A", "B", "C", "D"])
+    correct: { type: Number } // Index of the correct answer (0 to 3)
+  },
   order: Number
 });
 
-// 2. Define what a SINGLE CHAPTER looks like (it contains an array of lessons)
+// 2. Chapter Schema (Remains the same)
 const chapterSchema = new mongoose.Schema({
   title: { type: String, required: true },
   order: Number,
-  lessons: [lessonSchema] // <--- This nests the lessons inside the chapter
+  lessons: [lessonSchema] 
 });
 
-// 3. Define the MAIN COURSE (it contains an array of chapters)
+// 3. Main Course Schema (Remains the same)
 const courseSchema = new mongoose.Schema({
   title: { type: String, required: true },
   description: String,
   level: { type: String, default: 'Beginner' },
-  chapters: [chapterSchema] // <--- This nests the chapters inside the course
+  chapters: [chapterSchema]
 });
 
 module.exports = mongoose.model('Course', courseSchema);

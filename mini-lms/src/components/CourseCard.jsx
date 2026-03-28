@@ -1,15 +1,18 @@
 import { useNavigate } from 'react-router-dom';
 
-function CourseCard({ course, progress }) {
+function CourseCard({ course, progress, isAdmin }) {
   const navigate = useNavigate();
   const { getProgress, completedLessons } = progress;
 
-  const allLessons = course.chapters.flatMap(ch => ch.lessons);
+  // ── Calculation Logic ──────────────────────────────────────────
+  const allLessons = (course.chapters || []).flatMap(ch => ch.lessons || []);
   const progressPct = getProgress(allLessons);
   const completedCount = allLessons.filter(l =>
     completedLessons.includes(l._id)
   ).length;
-  const isComplete = progressPct === 100;
+  
+  // Only consider it "complete" if the user is a student and hits 100%
+  const isComplete = !isAdmin && progressPct === 100;
 
   const levelStyles = {
     Beginner:     'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200',
@@ -20,59 +23,75 @@ function CourseCard({ course, progress }) {
   return (
     <div
       onClick={() => navigate(`/course/${course._id}`)}
-      className="group bg-white rounded-2xl border border-stone-200 shadow-sm hover:border-amber-200 hover:shadow-md transition-all duration-200 cursor-pointer overflow-hidden"
+      className="group bg-white rounded-2xl border border-stone-200 shadow-sm hover:border-amber-400 hover:shadow-md transition-all duration-300 cursor-pointer overflow-hidden flex flex-col"
     >
-      {/* Amber left accent stripe */}
-      <div className="flex h-full">
-        <div className="w-1 bg-gradient-to-b from-amber-400 to-amber-300 flex-shrink-0" />
+      {/* Visual Accent */}
+      <div className="h-1.5 bg-gradient-to-r from-amber-400 to-amber-300 w-full" />
 
-        <div className="flex-1 p-5">
-
-          {/* Level badge + completion badge */}
-          <div className="flex items-center justify-between mb-3">
-            <span className={`text-xs font-semibold px-3 py-1 rounded-full ${levelStyles[course.level] || levelStyles.Advanced}`}>
-              {course.level}
+      <div className="p-5 flex flex-col flex-1">
+        {/* Level badge + completion badge */}
+        <div className="flex items-center justify-between mb-3">
+          <span className={`text-[10px] uppercase tracking-widest font-bold px-2.5 py-1 rounded-md ${levelStyles[course.level] || levelStyles.Advanced}`}>
+            {course.level}
+          </span>
+          
+          {/* 💡 Hide "Done" badge for Admin */}
+          {!isAdmin && isComplete && (
+            <span className="text-[10px] font-bold bg-emerald-500 text-white px-2.5 py-1 rounded-md shadow-sm">
+              ✓ COMPLETED
             </span>
-            {isComplete && (
-              <span className="text-xs font-semibold bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 px-2.5 py-1 rounded-full">
-                ✓ Done
-              </span>
+          )}
+          
+          {/* 🛠️ Show Admin Label instead */}
+          {isAdmin && (
+            <span className="text-[9px] font-black text-stone-300 uppercase tracking-tighter">
+              Admin View
+            </span>
+          )}
+        </div>
+
+        {/* Title */}
+        <h2 className="text-lg font-bold text-stone-800 leading-tight group-hover:text-amber-600 transition-colors duration-200">
+          {course.title}
+        </h2>
+
+        {/* Description */}
+        <p className="text-xs text-stone-400 mt-2 leading-relaxed line-clamp-2 italic">
+          {course.description || "No description provided."}
+        </p>
+
+        {/* ── Metadata & Progress ── */}
+        <div className="mt-auto pt-5">
+          <div className="flex items-center justify-between text-[10px] font-black text-stone-400 uppercase tracking-widest mb-2">
+            <span>{course.chapters?.length || 0} Chapters</span>
+            
+            {/* 💡 Hide "0/0 lessons" count for Admin */}
+            {!isAdmin && (
+              <span>{completedCount}/{allLessons.length} Lessons</span>
             )}
           </div>
 
-          {/* Title */}
-          <h2 className="text-base font-bold text-stone-800 leading-snug group-hover:text-amber-700 transition-colors duration-150">
-            {course.title}
-          </h2>
-
-          {/* Description */}
-          <p className="text-sm text-stone-400 mt-1.5 leading-relaxed line-clamp-2">
-            {course.description}
-          </p>
-
-          {/* Meta row */}
-          <div className="mt-4 flex items-center justify-between text-xs text-stone-400 font-medium">
-            <span>{course.chapters.length} chapters</span>
-            <span>{completedCount}/{allLessons.length} lessons</span>
-          </div>
-
-          {/* Progress bar */}
-          <div className="mt-2 bg-stone-100 rounded-full h-1.5 overflow-hidden">
-            <div
-              className={`h-1.5 rounded-full transition-all duration-700 ease-out ${
-                isComplete
-                  ? 'bg-gradient-to-r from-emerald-400 to-emerald-500'
-                  : 'bg-gradient-to-r from-amber-400 to-amber-500'
-              }`}
-              style={{ width: `${progressPct}%` }}
-            />
-          </div>
-
-          {/* Progress label */}
-          <p className={`text-xs mt-1.5 font-semibold ${isComplete ? 'text-emerald-600' : 'text-amber-600'}`}>
-            {progressPct}% complete
-          </p>
-
+          {/* 💡 Progress Bar - ONLY FOR STUDENTS */}
+          {!isAdmin ? (
+            <>
+              <div className="bg-stone-100 rounded-full h-1.5 overflow-hidden">
+                <div
+                  className={`h-1.5 rounded-full transition-all duration-700 ease-out ${
+                    isComplete ? 'bg-emerald-500' : 'bg-amber-500'
+                  }`}
+                  style={{ width: `${progressPct}%` }}
+                />
+              </div>
+              <p className={`text-[10px] mt-2 font-black uppercase tracking-widest ${isComplete ? 'text-emerald-600' : 'text-amber-600'}`}>
+                {progressPct}% Progress
+              </p>
+            </>
+          ) : (
+            /* 🛠️ Admin View Footer */
+            <div className="border-t border-stone-50 pt-3">
+               <span className="text-[10px] font-bold text-amber-500/50">Click to preview content →</span>
+            </div>
+          )}
         </div>
       </div>
     </div>

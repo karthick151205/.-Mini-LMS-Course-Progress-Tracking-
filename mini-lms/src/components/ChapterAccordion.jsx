@@ -1,17 +1,18 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-function ChapterAccordion({ chapter, completedLessons, toggleLesson, courseId }) {
+function ChapterAccordion({ chapter, completedLessons, toggleLesson, courseId, isAdmin }) {
   const [isOpen, setIsOpen] = useState(true);
   const navigate = useNavigate();
 
+  // ── Stats Logic ──────────────────────────────────────────
   const completedCount = chapter.lessons.filter(l =>
     completedLessons.includes(l._id)
   ).length;
   const allDone = completedCount === chapter.lessons.length;
 
   return (
-    <div>
+    <div className="overflow-hidden">
       {/* ── Accordion Header ──────────────────────────────────── */}
       <div
         onClick={() => setIsOpen(!isOpen)}
@@ -27,14 +28,16 @@ function ChapterAccordion({ chapter, completedLessons, toggleLesson, courseId })
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Progress count */}
-          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-            allDone
-              ? 'bg-emerald-50 text-emerald-600 ring-1 ring-emerald-200'
-              : 'text-stone-400'
-          }`}>
-            {completedCount}/{chapter.lessons.length}
-          </span>
+          {/* 💡 Progress count - Only show for Students */}
+          {!isAdmin && (
+            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+              allDone
+                ? 'bg-emerald-50 text-emerald-600 ring-1 ring-emerald-200'
+                : 'text-stone-400'
+            }`}>
+              {completedCount}/{chapter.lessons.length}
+            </span>
+          )}
 
           {/* Chevron */}
           <svg
@@ -49,9 +52,9 @@ function ChapterAccordion({ chapter, completedLessons, toggleLesson, courseId })
 
       {/* ── Lesson List ───────────────────────────────────────── */}
       {isOpen && (
-        <div>
-          {chapter.lessons.map((lesson, index) => {
-            const done = completedLessons.includes(lesson._id);
+        <div className="bg-white">
+          {chapter.lessons.map((lesson) => {
+            const done = !isAdmin && completedLessons.includes(lesson._id);
             const isQuiz = lesson.type === 'quiz';
 
             return (
@@ -59,19 +62,21 @@ function ChapterAccordion({ chapter, completedLessons, toggleLesson, courseId })
                 key={lesson._id}
                 className="flex items-center gap-4 px-5 py-3 border-t border-stone-100 hover:bg-stone-50 transition-colors duration-150 group/row"
               >
-                {/* Completion toggle */}
-                <div
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleLesson(lesson._id, courseId);
-                  }}
-                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 cursor-pointer transition-all duration-200
-                    ${done
-                      ? 'bg-emerald-500 border-emerald-500 shadow-sm'
-                      : 'border-stone-300 hover:border-amber-400'}`}
-                >
-                  {done && <span className="text-white text-[10px] font-bold">✓</span>}
-                </div>
+                {/* 💡 Completion toggle - Hide for Admin */}
+                {!isAdmin && (
+                  <div
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleLesson(lesson._id, courseId);
+                    }}
+                    className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 cursor-pointer transition-all duration-200
+                      ${done
+                        ? 'bg-emerald-500 border-emerald-500 shadow-sm'
+                        : 'border-stone-300 hover:border-amber-400'}`}
+                  >
+                    {done && <span className="text-white text-[10px] font-bold">✓</span>}
+                  </div>
+                )}
 
                 {/* Lesson title */}
                 <div
