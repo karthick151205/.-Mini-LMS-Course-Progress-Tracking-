@@ -3,20 +3,16 @@ import { useNavigate } from 'react-router-dom';
 import {
   fetchCourses,
   createCourse,
-  updateCourse,
   deleteCourse,
   createChapter,
-  deleteChapter,
   createLesson,
-  deleteLesson,
+  deleteLesson, // Assuming you add this to api.js based on previous steps
 } from '../api';
 
-// ── Tiny reusable input ────────────────────────────────────────
+// ── Reusable UI Components ──────────────────────────────────────
 const Field = ({ label, value, onChange, type = 'text', placeholder, textarea }) => (
   <div>
-    <label className="block text-xs font-bold text-stone-500 uppercase tracking-widest mb-1.5">
-      {label}
-    </label>
+    <label className="block text-xs font-bold text-stone-500 uppercase tracking-widest mb-1.5">{label}</label>
     {textarea ? (
       <textarea
         rows={3}
@@ -37,7 +33,6 @@ const Field = ({ label, value, onChange, type = 'text', placeholder, textarea })
   </div>
 );
 
-// ── Modal wrapper ──────────────────────────────────────────────
 const Modal = ({ title, onClose, children }) => (
   <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
     <div className="absolute inset-0 bg-stone-900/60 backdrop-blur-sm" onClick={onClose} />
@@ -54,7 +49,6 @@ const Modal = ({ title, onClose, children }) => (
   </div>
 );
 
-// ── Confirm delete dialog ──────────────────────────────────────
 const ConfirmModal = ({ message, onConfirm, onCancel }) => (
   <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
     <div className="absolute inset-0 bg-stone-900/60 backdrop-blur-sm" onClick={onCancel} />
@@ -71,46 +65,36 @@ const ConfirmModal = ({ message, onConfirm, onCancel }) => (
           </div>
         </div>
         <div className="flex gap-3 pt-2">
-          <button onClick={onCancel} className="flex-1 py-2.5 bg-stone-100 hover:bg-stone-200 text-stone-600 text-sm font-semibold rounded-xl transition-colors">
-            Cancel
-          </button>
-          <button onClick={onConfirm} className="flex-1 py-2.5 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold rounded-xl transition-colors">
-            Delete
-          </button>
+          <button onClick={onCancel} className="flex-1 py-2.5 bg-stone-100 hover:bg-stone-200 text-stone-600 text-sm font-semibold rounded-xl transition-colors">Cancel</button>
+          <button onClick={onConfirm} className="flex-1 py-2.5 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold rounded-xl transition-colors">Delete</button>
         </div>
       </div>
     </div>
   </div>
 );
 
-// ─────────────────────────────────────────────────────────────
-export default function AdminPanel({ user, setUser }) {
+// ── Main Admin Panel ──────────────────────────────────────────
+export default function AdminPanel({ user }) {
   const navigate = useNavigate();
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expandedCourse, setExpandedCourse] = useState(null);
   const [expandedChapter, setExpandedChapter] = useState(null);
 
-  // Modal states
-  const [modal, setModal] = useState(null); // 'addCourse' | 'editCourse' | 'addChapter' | 'addLesson'
-  const [modalTarget, setModalTarget] = useState(null); // courseId or chapterId context
-  const [confirmDelete, setConfirmDelete] = useState(null); // { type, id, label }
+  const [modal, setModal] = useState(null); 
+  const [modalTarget, setModalTarget] = useState(null); 
+  const [confirmDelete, setConfirmDelete] = useState(null); 
 
-  // Form states
   const [courseForm, setCourseForm] = useState({ title: '', description: '', level: 'Beginner' });
   const [chapterForm, setChapterForm] = useState({ title: '' });
-  const [lessonForm, setLessonForm] = useState({ title: '', type: 'lesson', content: '' });
+  const [lessonForm, setLessonForm] = useState({ title: '', type: 'reading', content: '' });
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState(null);
 
-  // Guard: only admin
   useEffect(() => {
     if (user?.role !== 'admin') navigate('/');
-  }, [user]);
-
-  useEffect(() => {
     loadCourses();
-  }, []);
+  }, [user, navigate]);
 
   const loadCourses = async () => {
     setLoading(true);
@@ -124,27 +108,16 @@ export default function AdminPanel({ user, setUser }) {
     setTimeout(() => setToast(null), 3000);
   };
 
-  const closeModal = () => { setModal(null); setModalTarget(null); };
+  const closeModal = () => { setModal(null); setModalTarget(null); setSaving(false); };
 
-  // ── Course CRUD ─────────────────────────────────────────────
+  // ── Handlers ────────────────────────────────────────────────
   const handleAddCourse = async () => {
     if (!courseForm.title.trim()) return;
     setSaving(true);
     await createCourse(courseForm);
     await loadCourses();
-    setSaving(false);
     closeModal();
     showToast('Course created!');
-  };
-
-  const handleEditCourse = async () => {
-    if (!courseForm.title.trim()) return;
-    setSaving(true);
-    await updateCourse(modalTarget, courseForm);
-    await loadCourses();
-    setSaving(false);
-    closeModal();
-    showToast('Course updated!');
   };
 
   const handleDeleteCourse = async (id) => {
@@ -154,32 +127,22 @@ export default function AdminPanel({ user, setUser }) {
     setConfirmDelete(null);
   };
 
-  // ── Chapter CRUD ────────────────────────────────────────────
   const handleAddChapter = async () => {
     if (!chapterForm.title.trim()) return;
     setSaving(true);
-    await createChapter(modalTarget, chapterForm);
+    // ModalTarget is the Course ID
+    await createChapter(modalTarget, { ...chapterForm, order: 1 });
     await loadCourses();
-    setSaving(false);
     closeModal();
     showToast('Chapter added!');
   };
 
-  const handleDeleteChapter = async (courseId, chapterId) => {
-    await deleteChapter(courseId, chapterId);
-    await loadCourses();
-    showToast('Chapter deleted.', 'error');
-    setConfirmDelete(null);
-  };
-
-  // ── Lesson CRUD ─────────────────────────────────────────────
   const handleAddLesson = async () => {
     if (!lessonForm.title.trim()) return;
     setSaving(true);
     const { courseId, chapterId } = modalTarget;
-    await createLesson(courseId, chapterId, lessonForm);
+    await createLesson(courseId, chapterId, { ...lessonForm, order: 1 });
     await loadCourses();
-    setSaving(false);
     closeModal();
     showToast('Lesson added!');
   };
@@ -191,406 +154,109 @@ export default function AdminPanel({ user, setUser }) {
     setConfirmDelete(null);
   };
 
-  const levelStyles = {
-    Beginner:     'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200',
-    Intermediate: 'bg-sky-50 text-sky-700 ring-1 ring-sky-200',
-    Advanced:     'bg-violet-50 text-violet-700 ring-1 ring-violet-200',
-  };
-
-  const totalLessons = courses.flatMap(c =>
-    (c.chapters || []).flatMap(ch => ch.lessons || [])
-  ).length;
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-stone-950 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 rounded-full border-4 border-amber-800 border-t-amber-400 animate-spin" />
-          <p className="text-stone-500 text-sm font-medium">Loading admin panel...</p>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <div className="min-h-screen bg-stone-950 flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-t-2 border-amber-500"></div></div>;
 
   return (
-    <div className="min-h-screen bg-stone-950 text-white">
-
-      {/* ── Toast ───────────────────────────────────────────────── */}
+    <div className="min-h-screen bg-stone-950 text-white flex">
+      {/* Toast Notification */}
       {toast && (
-        <div className={`fixed top-5 right-5 z-50 flex items-center gap-2 px-4 py-3 rounded-xl shadow-xl text-sm font-semibold transition-all duration-300 ${
-          toast.type === 'error'
-            ? 'bg-red-500 text-white'
-            : 'bg-emerald-500 text-white'
-        }`}>
-          <span>{toast.type === 'error' ? '🗑️' : '✓'}</span>
+        <div className={`fixed top-5 right-5 z-[100] px-4 py-3 rounded-xl shadow-xl text-sm font-bold flex items-center gap-2 animate-bounce ${toast.type === 'error' ? 'bg-red-500' : 'bg-emerald-500'}`}>
           {toast.msg}
         </div>
       )}
 
-      {/* ── Sidebar + Content layout ─────────────────────────────── */}
-      <div className="flex min-h-screen">
+      {/* Sidebar */}
+      <aside className="w-64 bg-stone-900 border-r border-stone-800 p-6 hidden lg:flex flex-col">
+        <div className="flex items-center gap-3 mb-10">
+          <div className="w-8 h-8 bg-amber-500 rounded-lg flex items-center justify-center text-stone-900 font-bold">L</div>
+          <span className="font-bold text-xl tracking-tight">MiniLMS</span>
+        </div>
+        <nav className="space-y-2 flex-1">
+          <button className="w-full flex items-center gap-3 px-4 py-3 bg-amber-500/10 text-amber-500 rounded-xl font-bold text-sm">🗂️ Courses</button>
+          <button onClick={() => navigate('/')} className="w-full flex items-center gap-3 px-4 py-3 text-stone-500 hover:text-white transition-colors text-sm">🏠 Back to Site</button>
+        </nav>
+      </aside>
 
-        {/* ── Sidebar ───────────────────────────────────────────── */}
-        <aside className="w-56 bg-stone-900 border-r border-stone-800 flex flex-col py-6 px-4 gap-1 flex-shrink-0 hidden md:flex">
-          {/* Logo */}
-          <div className="flex items-center gap-2.5 px-2 mb-8">
-            <div className="w-8 h-8 rounded-lg bg-amber-500 flex items-center justify-center">
-              <span className="text-base">📚</span>
-            </div>
-            <div>
-              <p className="text-white font-bold text-sm leading-none">MiniLMS</p>
-              <p className="text-stone-500 text-[10px] font-medium mt-0.5">Admin Panel</p>
-            </div>
+      {/* Main Content */}
+      <main className="flex-1 overflow-auto">
+        <header className="px-8 py-6 border-b border-stone-800 flex justify-between items-center bg-stone-950/50 backdrop-blur-md sticky top-0 z-10">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Management</h1>
+            <p className="text-stone-500 text-sm">Control your courses and content</p>
           </div>
+          <button 
+            onClick={() => { setCourseForm({ title: '', description: '', level: 'Beginner' }); setModal('addCourse'); }}
+            className="px-5 py-2.5 bg-amber-500 text-stone-900 font-bold rounded-xl hover:bg-amber-400 transition-all active:scale-95"
+          >
+            + Create Course
+          </button>
+        </header>
 
-          {[
-            { icon: '🗂️', label: 'Courses', active: true },
-            { icon: '👥', label: 'Users', active: false },
-            { icon: '📊', label: 'Analytics', active: false },
-          ].map(({ icon, label, active }) => (
-            <button key={label} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors duration-150 ${
-              active
-                ? 'bg-amber-500/10 text-amber-400'
-                : 'text-stone-500 hover:text-stone-300 hover:bg-stone-800'
-            }`}>
-              <span>{icon}</span>{label}
-            </button>
-          ))}
-
-          <div className="mt-auto">
-            <button
-              onClick={() => navigate('/')}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-stone-500 hover:text-stone-300 hover:bg-stone-800 transition-colors w-full"
-            >
-              <span>←</span> Back to App
-            </button>
-          </div>
-        </aside>
-
-        {/* ── Main ──────────────────────────────────────────────── */}
-        <div className="flex-1 overflow-auto">
-
-          {/* Top bar */}
-          <header className="bg-stone-900 border-b border-stone-800 px-6 py-4 flex items-center justify-between sticky top-0 z-10">
-            <div>
-              <h1 className="text-white font-bold text-lg tracking-tight">Course Management</h1>
-              <p className="text-stone-500 text-xs mt-0.5">Manage all courses, chapters and lessons</p>
-            </div>
-            <button
-              onClick={() => {
-                setCourseForm({ title: '', description: '', level: 'Beginner' });
-                setModal('addCourse');
-              }}
-              className="flex items-center gap-2 bg-amber-500 hover:bg-amber-400 active:scale-95 text-stone-900 text-sm font-bold px-4 py-2 rounded-xl transition-all duration-150 shadow-md"
-            >
-              <span className="text-base">+</span> New Course
-            </button>
-          </header>
-
-          <div className="p-6 space-y-5">
-
-            {/* Stats */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-              {[
-                { label: 'Total Courses',  value: courses.length,  icon: '🗂️' },
-                { label: 'Total Chapters', value: courses.reduce((a, c) => a + (c.chapters?.length || 0), 0), icon: '📖' },
-                { label: 'Total Lessons',  value: totalLessons,    icon: '🎬' },
-              ].map(({ label, value, icon }) => (
-                <div key={label} className="bg-stone-900 border border-stone-800 rounded-2xl p-4">
-                  <span className="text-xl">{icon}</span>
-                  <p className="text-2xl font-bold text-white mt-2">{value}</p>
-                  <p className="text-stone-500 text-xs font-medium mt-0.5">{label}</p>
+        <div className="p-8 space-y-6">
+          {courses.map(course => (
+            <div key={course._id} className="bg-stone-900 border border-stone-800 rounded-2xl overflow-hidden shadow-sm hover:border-stone-700 transition-all">
+              <div className="p-5 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <button onClick={() => setExpandedCourse(expandedCourse === course._id ? null : course._id)} className="text-stone-600 hover:text-amber-500 transition-colors">
+                    {expandedCourse === course._id ? '🔽' : '▶️'}
+                  </button>
+                  <div>
+                    <h3 className="font-bold text-white">{course.title}</h3>
+                    <p className="text-stone-500 text-xs">{course.level} • {course.chapters?.length || 0} Chapters</p>
+                  </div>
                 </div>
-              ))}
-            </div>
-
-            {/* Course list */}
-            {courses.length === 0 ? (
-              <div className="bg-stone-900 border border-stone-800 rounded-2xl p-16 text-center">
-                <p className="text-4xl mb-3">📭</p>
-                <p className="text-stone-400 font-medium">No courses yet.</p>
-                <p className="text-stone-600 text-sm mt-1">Click "New Course" to get started.</p>
+                <div className="flex gap-2">
+                  <button onClick={() => { setModalTarget(course._id); setModal('addChapter'); }} className="px-3 py-1.5 bg-stone-800 text-xs font-bold rounded-lg hover:bg-stone-700 transition-colors">+ Chapter</button>
+                  <button onClick={() => setConfirmDelete({ type: 'course', id: course._id, label: course.title })} className="p-1.5 text-stone-500 hover:text-red-500 transition-colors">🗑️</button>
+                </div>
               </div>
-            ) : (
-              <div className="space-y-4">
-                {courses.map(course => (
-                  <div key={course._id} className="bg-stone-900 border border-stone-800 rounded-2xl overflow-hidden">
 
-                    {/* Course row */}
-                    <div className="flex items-center gap-4 px-5 py-4">
-                      <button
-                        onClick={() => setExpandedCourse(expandedCourse === course._id ? null : course._id)}
-                        className="text-stone-500 hover:text-amber-400 transition-colors text-xs"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" className={`w-4 h-4 transition-transform duration-200 ${expandedCourse === course._id ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-                        </svg>
-                      </button>
-
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <h3 className="text-white font-semibold text-sm">{course.title}</h3>
-                          <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${levelStyles[course.level] || levelStyles.Advanced}`}>
-                            {course.level}
-                          </span>
-                        </div>
-                        <p className="text-stone-500 text-xs mt-0.5 truncate">{course.description}</p>
+              {expandedCourse === course._id && (
+                <div className="bg-stone-950/30 border-t border-stone-800 p-4 space-y-3">
+                  {course.chapters?.map(chapter => (
+                    <div key={chapter._id} className="bg-stone-900/50 border border-stone-800/50 rounded-xl p-3">
+                      <div className="flex justify-between items-center mb-2">
+                        <h4 className="text-sm font-bold text-stone-300">📖 {chapter.title}</h4>
+                        <button 
+                          onClick={() => { setModalTarget({ courseId: course._id, chapterId: chapter._id }); setModal('addLesson'); }}
+                          className="text-[10px] font-bold text-amber-500 hover:underline"
+                        >
+                          + Add Lesson
+                        </button>
                       </div>
-
-                      <div className="flex items-center gap-2 text-xs text-stone-600 hidden sm:flex">
-                        <span>{course.chapters?.length || 0} ch</span>
-                        <span>·</span>
-                        <span>{(course.chapters || []).flatMap(ch => ch.lessons || []).length} ls</span>
-                      </div>
-
-                      {/* Actions */}
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => {
-                            setChapterForm({ title: '' });
-                            setModalTarget(course._id);
-                            setModal('addChapter');
-                          }}
-                          className="text-xs text-stone-400 hover:text-amber-400 bg-stone-800 hover:bg-stone-700 px-3 py-1.5 rounded-lg font-medium transition-colors"
-                        >
-                          + Chapter
-                        </button>
-                        <button
-                          onClick={() => {
-                            setCourseForm({ title: course.title, description: course.description, level: course.level });
-                            setModalTarget(course._id);
-                            setModal('editCourse');
-                          }}
-                          className="text-stone-400 hover:text-amber-400 p-1.5 rounded-lg hover:bg-stone-800 transition-colors"
-                          title="Edit"
-                        >
-                          ✏️
-                        </button>
-                        <button
-                          onClick={() => setConfirmDelete({ type: 'course', id: course._id, label: course.title })}
-                          className="text-stone-400 hover:text-red-400 p-1.5 rounded-lg hover:bg-stone-800 transition-colors"
-                          title="Delete"
-                        >
-                          🗑️
-                        </button>
+                      <div className="space-y-1 pl-4">
+                        {chapter.lessons?.map(lesson => (
+                          <div key={lesson._id} className="flex justify-between items-center group">
+                            <span className="text-xs text-stone-500 group-hover:text-stone-300 transition-colors">• {lesson.title}</span>
+                            <button 
+                              onClick={() => setConfirmDelete({ type: 'lesson', courseId: course._id, chapterId: chapter._id, id: lesson._id, label: lesson.title })}
+                              className="text-[10px] text-stone-700 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        ))}
                       </div>
                     </div>
-
-                    {/* Chapters */}
-                    {expandedCourse === course._id && (
-                      <div className="border-t border-stone-800">
-                        {(course.chapters || []).length === 0 ? (
-                          <p className="text-stone-600 text-xs px-10 py-4">No chapters yet. Add one above.</p>
-                        ) : (
-                          (course.chapters || []).map(chapter => (
-                            <div key={chapter._id} className="border-b border-stone-800/60 last:border-0">
-
-                              {/* Chapter row */}
-                              <div className="flex items-center gap-4 px-10 py-3 bg-stone-950/40 hover:bg-stone-800/20 transition-colors">
-                                <button
-                                  onClick={() => setExpandedChapter(expandedChapter === chapter._id ? null : chapter._id)}
-                                  className="text-stone-600 hover:text-amber-400 transition-colors"
-                                >
-                                  <svg xmlns="http://www.w3.org/2000/svg" className={`w-3.5 h-3.5 transition-transform duration-200 ${expandedChapter === chapter._id ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-                                  </svg>
-                                </button>
-
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-xs font-bold text-amber-500/70 uppercase tracking-widest">Ch</span>
-                                    <span className="text-stone-300 text-sm font-medium">{chapter.title}</span>
-                                  </div>
-                                </div>
-
-                                <span className="text-stone-600 text-xs hidden sm:block">
-                                  {chapter.lessons?.length || 0} lessons
-                                </span>
-
-                                <div className="flex items-center gap-1.5">
-                                  <button
-                                    onClick={() => {
-                                      setLessonForm({ title: '', type: 'lesson', content: '' });
-                                      setModalTarget({ courseId: course._id, chapterId: chapter._id });
-                                      setModal('addLesson');
-                                    }}
-                                    className="text-xs text-stone-500 hover:text-amber-400 bg-stone-800 hover:bg-stone-700 px-2.5 py-1 rounded-lg font-medium transition-colors"
-                                  >
-                                    + Lesson
-                                  </button>
-                                  <button
-                                    onClick={() => setConfirmDelete({ type: 'chapter', courseId: course._id, id: chapter._id, label: chapter.title })}
-                                    className="text-stone-600 hover:text-red-400 p-1 rounded-lg hover:bg-stone-800 transition-colors"
-                                  >
-                                    🗑️
-                                  </button>
-                                </div>
-                              </div>
-
-                              {/* Lessons */}
-                              {expandedChapter === chapter._id && (
-                                <div className="bg-stone-950/60">
-                                  {(chapter.lessons || []).length === 0 ? (
-                                    <p className="text-stone-600 text-xs px-16 py-3">No lessons yet.</p>
-                                  ) : (
-                                    (chapter.lessons || []).map(lesson => (
-                                      <div key={lesson._id} className="flex items-center gap-3 px-16 py-2.5 border-t border-stone-800/40 hover:bg-stone-800/10 transition-colors">
-                                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${lesson.type === 'quiz' ? 'bg-amber-400' : 'bg-sky-400'}`} />
-                                        <span className="text-stone-400 text-xs font-medium flex-1 truncate">{lesson.title}</span>
-                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                                          lesson.type === 'quiz'
-                                            ? 'bg-amber-500/10 text-amber-400'
-                                            : 'bg-sky-500/10 text-sky-400'
-                                        }`}>
-                                          {lesson.type}
-                                        </span>
-                                        <button
-                                          onClick={() => setConfirmDelete({
-                                            type: 'lesson',
-                                            courseId: course._id,
-                                            chapterId: chapter._id,
-                                            id: lesson._id,
-                                            label: lesson.title
-                                          })}
-                                          className="text-stone-700 hover:text-red-400 transition-colors text-xs"
-                                        >
-                                          🗑️
-                                        </button>
-                                      </div>
-                                    ))
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
         </div>
-      </div>
+      </main>
 
-      {/* ══ MODALS ════════════════════════════════════════════════ */}
+      {/* Modals */}
+      {modal === 'addCourse' && <Modal title="New Course" onClose={closeModal}><div className="space-y-4"><Field label="Title" value={courseForm.title} onChange={e=>setCourseForm({...courseForm, title: e.target.value})} /><Field label="Desc" textarea value={courseForm.description} onChange={e=>setCourseForm({...courseForm, description: e.target.value})} /><button onClick={handleAddCourse} className="w-full py-3 bg-stone-900 text-white font-bold rounded-xl">Create</button></div></Modal>}
+      
+      {modal === 'addChapter' && <Modal title="New Chapter" onClose={closeModal}><div className="space-y-4"><Field label="Chapter Name" value={chapterForm.title} onChange={e=>setChapterForm({title: e.target.value})} /><button onClick={handleAddChapter} className="w-full py-3 bg-stone-900 text-white font-bold rounded-xl">Add Chapter</button></div></Modal>}
+      
+      {modal === 'addLesson' && <Modal title="New Lesson" onClose={closeModal}><div className="space-y-4"><Field label="Lesson Title" value={lessonForm.title} onChange={e=>setLessonForm({...lessonForm, title: e.target.value})} /><Field label="Content" textarea value={lessonForm.content} onChange={e=>setLessonForm({...lessonForm, content: e.target.value})} /><button onClick={handleAddLesson} className="w-full py-3 bg-stone-900 text-white font-bold rounded-xl">Add Lesson</button></div></Modal>}
 
-      {/* Add Course */}
-      {modal === 'addCourse' && (
-        <Modal title="Create New Course" onClose={closeModal}>
-          <div className="space-y-5">
-            <Field label="Course Title" value={courseForm.title} onChange={e => setCourseForm({ ...courseForm, title: e.target.value })} placeholder="e.g. Intro to React" />
-            <Field label="Description" value={courseForm.description} onChange={e => setCourseForm({ ...courseForm, description: e.target.value })} placeholder="Brief course description..." textarea />
-            <div>
-              <label className="block text-xs font-bold text-stone-500 uppercase tracking-widest mb-1.5">Level</label>
-              <select
-                value={courseForm.level}
-                onChange={e => setCourseForm({ ...courseForm, level: e.target.value })}
-                className="w-full bg-stone-50 border-b-2 border-stone-200 text-stone-800 text-sm py-2 outline-none focus:border-amber-500 transition-all duration-200"
-              >
-                {['Beginner', 'Intermediate', 'Advanced'].map(l => <option key={l}>{l}</option>)}
-              </select>
-            </div>
-            <div className="flex gap-3 pt-2">
-              <button onClick={closeModal} className="flex-1 py-2.5 bg-stone-100 hover:bg-stone-200 text-stone-600 text-sm font-semibold rounded-xl transition-colors">Cancel</button>
-              <button onClick={handleAddCourse} disabled={saving} className="flex-1 py-2.5 bg-stone-900 hover:bg-amber-500 text-white text-sm font-semibold rounded-xl transition-all duration-200 disabled:opacity-50 flex items-center justify-center gap-2">
-                {saving ? <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : 'Create Course'}
-              </button>
-            </div>
-          </div>
-        </Modal>
-      )}
-
-      {/* Edit Course */}
-      {modal === 'editCourse' && (
-        <Modal title="Edit Course" onClose={closeModal}>
-          <div className="space-y-5">
-            <Field label="Course Title" value={courseForm.title} onChange={e => setCourseForm({ ...courseForm, title: e.target.value })} placeholder="Course title" />
-            <Field label="Description" value={courseForm.description} onChange={e => setCourseForm({ ...courseForm, description: e.target.value })} placeholder="Description..." textarea />
-            <div>
-              <label className="block text-xs font-bold text-stone-500 uppercase tracking-widest mb-1.5">Level</label>
-              <select
-                value={courseForm.level}
-                onChange={e => setCourseForm({ ...courseForm, level: e.target.value })}
-                className="w-full bg-stone-50 border-b-2 border-stone-200 text-stone-800 text-sm py-2 outline-none focus:border-amber-500 transition-all duration-200"
-              >
-                {['Beginner', 'Intermediate', 'Advanced'].map(l => <option key={l}>{l}</option>)}
-              </select>
-            </div>
-            <div className="flex gap-3 pt-2">
-              <button onClick={closeModal} className="flex-1 py-2.5 bg-stone-100 hover:bg-stone-200 text-stone-600 text-sm font-semibold rounded-xl transition-colors">Cancel</button>
-              <button onClick={handleEditCourse} disabled={saving} className="flex-1 py-2.5 bg-stone-900 hover:bg-amber-500 text-white text-sm font-semibold rounded-xl transition-all duration-200 disabled:opacity-50 flex items-center justify-center gap-2">
-                {saving ? <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : 'Save Changes'}
-              </button>
-            </div>
-          </div>
-        </Modal>
-      )}
-
-      {/* Add Chapter */}
-      {modal === 'addChapter' && (
-        <Modal title="Add Chapter" onClose={closeModal}>
-          <div className="space-y-5">
-            <Field label="Chapter Title" value={chapterForm.title} onChange={e => setChapterForm({ title: e.target.value })} placeholder="e.g. Getting Started" />
-            <div className="flex gap-3 pt-2">
-              <button onClick={closeModal} className="flex-1 py-2.5 bg-stone-100 hover:bg-stone-200 text-stone-600 text-sm font-semibold rounded-xl transition-colors">Cancel</button>
-              <button onClick={handleAddChapter} disabled={saving} className="flex-1 py-2.5 bg-stone-900 hover:bg-amber-500 text-white text-sm font-semibold rounded-xl transition-all duration-200 disabled:opacity-50 flex items-center justify-center gap-2">
-                {saving ? <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : 'Add Chapter'}
-              </button>
-            </div>
-          </div>
-        </Modal>
-      )}
-
-      {/* Add Lesson */}
-      {modal === 'addLesson' && (
-        <Modal title="Add Lesson" onClose={closeModal}>
-          <div className="space-y-5">
-            <Field label="Lesson Title" value={lessonForm.title} onChange={e => setLessonForm({ ...lessonForm, title: e.target.value })} placeholder="e.g. What is JSX?" />
-            <div>
-              <label className="block text-xs font-bold text-stone-500 uppercase tracking-widest mb-1.5">Type</label>
-              <div className="flex gap-3">
-                {['lesson', 'quiz'].map(t => (
-                  <button
-                    key={t}
-                    onClick={() => setLessonForm({ ...lessonForm, type: t })}
-                    className={`flex-1 py-2 rounded-xl text-sm font-semibold border transition-all duration-150 ${
-                      lessonForm.type === t
-                        ? 'bg-stone-900 text-white border-stone-900'
-                        : 'bg-stone-50 text-stone-500 border-stone-200 hover:border-stone-400'
-                    }`}
-                  >
-                    {t === 'quiz' ? '📝 Quiz' : '🎬 Lesson'}
-                  </button>
-                ))}
-              </div>
-            </div>
-            {lessonForm.type === 'lesson' && (
-              <Field label="Content" value={lessonForm.content} onChange={e => setLessonForm({ ...lessonForm, content: e.target.value })} placeholder="Lesson content..." textarea />
-            )}
-            <div className="flex gap-3 pt-2">
-              <button onClick={closeModal} className="flex-1 py-2.5 bg-stone-100 hover:bg-stone-200 text-stone-600 text-sm font-semibold rounded-xl transition-colors">Cancel</button>
-              <button onClick={handleAddLesson} disabled={saving} className="flex-1 py-2.5 bg-stone-900 hover:bg-amber-500 text-white text-sm font-semibold rounded-xl transition-all duration-200 disabled:opacity-50 flex items-center justify-center gap-2">
-                {saving ? <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : 'Add Lesson'}
-              </button>
-            </div>
-          </div>
-        </Modal>
-      )}
-
-      {/* Confirm Delete */}
-      {confirmDelete && (
-        <ConfirmModal
-          message={`"${confirmDelete.label}" will be permanently deleted.`}
-          onCancel={() => setConfirmDelete(null)}
-          onConfirm={() => {
-            if (confirmDelete.type === 'course') handleDeleteCourse(confirmDelete.id);
-            if (confirmDelete.type === 'chapter') handleDeleteChapter(confirmDelete.courseId, confirmDelete.id);
-            if (confirmDelete.type === 'lesson') handleDeleteLesson(confirmDelete.courseId, confirmDelete.chapterId, confirmDelete.id);
-          }}
-        />
-      )}
+      {confirmDelete && <ConfirmModal message={`Delete ${confirmDelete.label}?`} onCancel={()=>setConfirmDelete(null)} onConfirm={()=>{
+        if(confirmDelete.type==='course') handleDeleteCourse(confirmDelete.id);
+        if(confirmDelete.type==='lesson') handleDeleteLesson(confirmDelete.courseId, confirmDelete.chapterId, confirmDelete.id);
+      }} />}
     </div>
   );
 }
